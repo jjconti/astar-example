@@ -18,12 +18,12 @@ class Visualiza(object):
         elementos -> [inicio, ... puntos, [puntos],... fin]
         '''
         elementos = elementos[:]
-        self.puntos = [Point2(float(x),float(y)) for x,y in flatten(elementos)]
+        self.puntos = [Point2(float(x),float(y)) for x,y in flatten(elementos) if (x,y) != inicio]
         self.origen = Point2(float(inicio[0]),float(inicio[1]))
         self.destinos = self.puntos[:]
-        self.destinos.remove(self.origen)   #No tiene sentido que un punto se vea a si mismo
+        #print self.destinos.remove(self.origen)   #No tiene sentido que un punto se vea a si mismo
 
-        self.poligonos = [self.armar_poligono(e) for e in elementos if type(e) == type([])]
+        self.poligonos = [self.armar_poligono(e) for e in elementos if isinstance(i, list)]
         self.segmentos = list(flatten(self.poligonos))
 
     def armar_poligono(self, puntos):
@@ -43,6 +43,7 @@ class Visualiza(object):
         return r
 
     def es_visible(self, destino):
+        print self.origen, destino, self.destinos
         segmento1 = LineSegment2(self.origen, destino)
         for segmento2 in self.segmentos:
             r = segmento1.intersect(segmento2)

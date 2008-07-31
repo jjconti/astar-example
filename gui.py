@@ -57,23 +57,23 @@ class GUI(object):
         self.sprites.update()
         
     def mouseclick(self, event):
-        p = event.pos
-        if not self.inicio:
-            self.ink = GREEN
-            self.inicio = p
-        elif not self.fin:
-            self.ink = RED
-            self.fin = p    
-        else:
-            self.buffer.append(p)
-        pygame.draw.circle(self.screen, self.ink, p, 4)
-        self.ink = BLACK
+        if not self.only_esc:
+            p = event.pos
+            if not self.inicio:
+                self.ink = GREEN
+                self.inicio = p
+            elif not self.fin:
+                self.ink = RED
+                self.fin = p    
+            else:
+                self.buffer.append(p)
+            pygame.draw.circle(self.screen, self.ink, p, 4)
+            self.ink = BLACK
             
     def keydown(self, event):
-        if self.only_esc:
-            if event.key == K_ESCAPE:
-                self.reset()        
-        else:
+        if event.key == K_ESCAPE:
+            self.reset()   
+        if not self.only_esc:     
             if event.key == K_SPACE:
                 if len(self.buffer) == 0:
                     pass

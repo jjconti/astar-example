@@ -30,7 +30,11 @@ class Problema(object):
                     self.nodos_a_expandir.append(nodo)
             #self.nodos_a_expandir += nodos
             self.nodos_a_expandir.sort()
-            self.nodo = self.nodos_a_expandir.pop(0)
+            if self.nodos_a_expandir:
+                self.nodo = self.nodos_a_expandir.pop(0)
+            else:
+                print "No se encontro solucion."
+                return []
         # Devolver resultado
         r = []
         while self.nodo:
