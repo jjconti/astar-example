@@ -1275,11 +1275,137 @@ class Quaternion:
 
         sintheta = math.sqrt(1.0 - costheta * costheta)
         if abs(sintheta) < 0.01:
-    ÿÿÿÿÊ·N¨ÚÙ/ É9   _2etq  º[_2ft4  è_2gqp  è_2hp2  è_2hsj   d_2hvu   d_2hza   d_2i2n   d_2i6e   d_2i9t   d_2ia4   
-_2iag   
-_2iar   
-_2ib2   
-_2ibc   	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      - B.v.y * dx) / d
+            Q.w = (q1.w + q2.w) * 0.5
+            Q.x = (q1.x + q2.x) * 0.5
+            Q.y = (q1.y + q2.y) * 0.5
+            Q.z = (q1.z + q2.z) * 0.5
+            return Q
+
+        ratio1 = math.sin((1 - t) * theta) / sintheta
+        ratio2 = math.sin(t * theta) / sintheta
+
+        Q.w = q1.w * ratio1 + q2.w * ratio2
+        Q.x = q1.x * ratio1 + q2.x * ratio2
+        Q.y = q1.y * ratio1 + q2.y * ratio2
+        Q.z = q1.z * ratio1 + q2.z * ratio2
+        return Q
+    new_interpolate = classmethod(new_interpolate)
+
+# Geometry
+# Much maths thanks to Paul Bourke, http://astronomy.swin.edu.au/~pbourke
+# ---------------------------------------------------------------------------
+
+class Geometry:
+    def _connect_unimplemented(self, other):
+        raise AttributeError, 'Cannot connect %s to %s' % \
+            (self.__class__, other.__class__)
+
+    def _intersect_unimplemented(self, other):
+        raise AttributeError, 'Cannot intersect %s and %s' % \
+            (self.__class__, other.__class__)
+
+    _intersect_point2 = _intersect_unimplemented
+    _intersect_line2 = _intersect_unimplemented
+    _intersect_circle = _intersect_unimplemented
+    _connect_point2 = _connect_unimplemented
+    _connect_line2 = _connect_unimplemented
+    _connect_circle = _connect_unimplemented
+
+    _intersect_point3 = _intersect_unimplemented
+    _intersect_line3 = _intersect_unimplemented
+    _intersect_sphere = _intersect_unimplemented
+    _intersect_plane = _intersect_unimplemented
+    _connect_point3 = _connect_unimplemented
+    _connect_line3 = _connect_unimplemented
+    _connect_sphere = _connect_unimplemented
+    _connect_plane = _connect_unimplemented
+
+    def intersect(self, other):
+        raise NotImplementedError
+
+    def connect(self, other):
+        raise NotImplementedError
+
+    def distance(self, other):
+        c = self.connect(other)
+        if c:
+            return c.length
+        return 0.0
+
+def _intersect_point2_circle(P, C):
+    return abs(P - C.c) <= C.r
+    
+def _intersect_line2_line2(A, B):
+    d = B.v.y * A.v.x - B.v.x * A.v.y
+    if d == 0:
+        return None
+
+    dy = A.p.y - B.p.y
+    dx = A.p.x - B.p.x
+    ua = (B.v.x * dy - B.v.y * dx) / d
+    if not A._u_in(ua):
+        return None
+    ub = (A.v.x * dy - A.v.y * dx) / d
+    if not B._u_in(ub):
+        return None
+
+    return Point2(A.p.x + ua * A.v.x,
+                  A.p.y + ua * A.v.y)
+
+def _intersect_line2_circle(L, C):
+    a = L.v.magnitude_squared()
+    b = 2 * (L.v.x * (L.p.x - C.c.x) + \
+             L.v.y * (L.p.y - C.c.y))
+    c = C.c.magnitude_squared() + \
+        L.p.magnitude_squared() - \
+        2 * C.c.dot(L.p) - \
+        C.r ** 2
+    det = b ** 2 - 4 * a * c
+    if det < 0:
+        return None
+    sq = math.sqrt(det)
+    u1 = (-b + sq) / (2 * a)
+    u2 = (-b - sq) / (2 * a)
+    if not L._u_in(u1):
+        u1 = max(min(u1, 1.0), 0.0)
+    if not L._u_in(u2):
+        u2 = max(min(u2, 1.0), 0.0)
+    return LineSegment2(Point2(L.p.x + u1 * L.v.x,
+                               L.p.y + u1 * L.v.y),
+                        Point2(L.p.x + u2 * L.v.x,
+                               L.p.y + u2 * L.v.y))
+
+def _connect_point2_line2(P, L):
+    d = L.v.magnitude_squared()
+    assert d != 0
+    u = ((P.x - L.p.x) * L.v.x + \
+         (P.y - L.p.y) * L.v.y) / d
+    if not L._u_in(u):
+        u = max(min(u, 1.0), 0.0)
+    return LineSegment2(P, 
+                        Point2(L.p.x + u * L.v.x,
+                               L.p.y + u * L.v.y))
+
+def _connect_point2_circle(P, C):
+    v = P - C.c
+    v.normalize()
+    v *= C.r
+    return LineSegment2(P, Point2(C.c.x + v.x, C.c.y + v.y))
+
+def _connect_line2_line2(A, B):
+    d = B.v.y * A.v.x - B.v.x * A.v.y
+    if d == 0:
+        # Parallel, connect an endpoint with a line
+        if isinstance(B, Ray2) or isinstance(B, LineSegment2):
+            p1, p2 = _connect_point2_line2(B.p, A)
+            return p2, p1
+        # No endpoint (or endpoint is on A), possibly choose arbitrary point
+        # on line.
+        return _connect_point2_line2(A.p, B)
+
+    dy = A.p.y - B.p.y
+    dx = A.p.x - B.p.x
+    ua = (B.v.x * dy - B.v.y * dx) / d
     if not A._u_in(ua):
         ua = max(min(ua, 1.0), 0.0)
     ub = (A.v.x * dy - A.v.y * dx) / d
@@ -1414,14 +1540,504 @@ class Ray2(Line2):
     def _u_in(self, u):
         return u >= 0.0
 
-cl       Õ	_2ibc.fnm      ¸	_2ibc.frq      -	_2ibc.prx      ¢	_2ibc.fdx      ê	_2ibc.fdt      j	_2ibc.tii      ‰	_2ibc.tis      	5_2ibc.f4      	>_2ibc.f5      	G_2ibc.f6      	P_2ibc.f9      	Y	_2ibc.f11UriInvertedTimestampYM:PropertyDate	Timestampprop:k:beagle:MimeTypeprop:k:beagle:NoContentprop:k:beagle:SourceD:PropertyDateYM:Timestampprop:k:beagle:IsChildD:Timestampprop:k:beagle:HitTypePropertyDate	                                                                                                                                    €             €             €             €       	  uid:BCG1bsLC10Of_Td7pFMIdA 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:KSxFMBQCQE6YU5HypDffHA 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:ARWoQmAcJ0mCQwg3zEn3bg 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:A_+EBdPWW0SIay2OlPO3Eg 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:J5s3FA5w1UuGrs7oUEbDAw 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:RD_63IlAyEueB9pO8mt2Ag 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:cY+O140ojUqDt0jo6552RQ 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:ZqVHD7f7A0mQlgAAavGpLw 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:false	  uid:KFygYB1rRkWNc5cHcqqDbw 20061215112048 200612
- 15_:true_:File_:application/octet-stream_:Files	_:falseÿÿÿþ          €     ÿÿÿÿ   ÿÿÿþ          €    15	   
-			 9223351975639663759			 20061215112048			 			 uid:ARWoQmAcJ0mCQwg3zEn3bg 		_+EBdPWW0SIay2OlPO3Eg BCG1bsLC10Of_Td7pFMIdA J5s3FA5w1UuGrs7oUEbDAw KFygYB1rRkWNc5cHcqqDbw SxFMBQCQE6YU5HypDffHA RD_63IlAyEueB9pO8mt2Ag ZqVHD7f7A0mQlgAAavGpLw cY+O140ojUqDt0jo6552RQ  200612	 			 file			alse				 application/octet-stream			 true			 files			|||||||||||||||||||||||||||||||||||||||||||||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+class LineSegment2(Line2):
+    def __repr__(self):
+        return 'LineSegment2(<%.2f, %.2f> to <%.2f, %.2f>)' % \
+            (self.p.x, self.p.y, self.p.x + self.v.x, self.p.y + self.v.y)
+
+    def _u_in(self, u):
+        return u >= 0.0 and u <= 1.0
+
+    def __abs__(self):
+        return abs(self.v)
+
+    def magnitude_squared(self):
+        return self.v.magnitude_squared()
+
+    def _swap(self):
+        # used by connect methods to switch order of points
+        self.p = self.p2
+        self.v *= -1
+        return self
+
+    length = property(lambda self: abs(self.v))
+
+class Circle(Geometry):
+    __slots__ = ['c', 'r']
+
+    def __init__(self, center, radius):
+        assert isinstance(center, Vector2) and type(radius) == float
+        self.c = center.copy()
+        self.r = radius
+
+    def __copy__(self):
+        return self.__class__(self.c, self.r)
+
+    copy = __copy__
+
+    def __repr__(self):
+        return 'Circle(<%.2f, %.2f>, radius=%.2f)' % \
+            (self.c.x, self.c.y, self.r)
+
+    def _apply_transform(self, t):
+        self.c = t * self.c
+
+    def intersect(self, other):
+        return other._intersect_circle(self)
+
+    def _intersect_point2(self, other):
+        return _intersect_point2_circle(other, self)
+
+    def _intersect_line2(self, other):
+        return _intersect_line2_circle(other, self)
+
+    def connect(self, other):
+        return other._connect_circle(self)
+
+    def _connect_point2(self, other):
+        return _connect_point2_circle(other, self)
+
+    def _connect_line2(self, other):
+        c = _connect_circle_line2(self, other)
+        if c:
+            return c._swap()
+
+    def _connect_circle(self, other):
+        return _connect_circle_circle(other, self)
+
+# 3D Geometry
+# -------------------------------------------------------------------------
+
+def _connect_point3_line3(P, L):
+    d = L.v.magnitude_squared()
+    assert d != 0
+    u = ((P.x - L.p.x) * L.v.x + \
+         (P.y - L.p.y) * L.v.y + \
+         (P.z - L.p.z) * L.v.z) / d
+    if not L._u_in(u):
+        u = max(min(u, 1.0), 0.0)
+    return LineSegment3(P, Point3(L.p.x + u * L.v.x,
+                                  L.p.y + u * L.v.y,
+                                  L.p.z + u * L.v.z))
+
+def _connect_point3_sphere(P, S):
+    v = P - S.c
+    v.normalize()
+    v *= S.r
+    return LineSegment3(P, Point3(S.c.x + v.x, S.c.y + v.y, S.c.z + v.z))
+
+def _connect_point3_plane(p, plane):
+    n = plane.n.normalized()
+    d = p.dot(plane.n) - plane.k
+    return LineSegment3(p, Point3(p.x - n.x * d, p.y - n.y * d, p.z - n.z * d))
+
+def _connect_line3_line3(A, B):
+    assert A.v and B.v
+    p13 = A.p - B.p
+    d1343 = p13.dot(B.v)
+    d4321 = B.v.dot(A.v)
+    d1321 = p13.dot(A.v)
+    d4343 = B.v.magnitude_squared()
+    denom = A.v.magnitude_squared() * d4343 - d4321 ** 2
+    if denom == 0:
+        # Parallel, connect an endpoint with a line
+        if isinstance(B, Ray3) or isinstance(B, LineSegment3):
+            return _connect_point3_line3(B.p, A)._swap()
+        # No endpoint (or endpoint is on A), possibly choose arbitrary
+        # point on line.
+        return _connect_point3_line3(A.p, B)
+
+    ua = (d1343 * d4321 - d1321 * d4343) / denom
+    if not A._u_in(ua):
+        ua = max(min(ua, 1.0), 0.0)
+    ub = (d1343 + d4321 * ua) / d4343
+    if not B._u_in(ub):
+        ub = max(min(ub, 1.0), 0.0)
+    return LineSegment3(Point3(A.p.x + ua * A.v.x,
+                               A.p.y + ua * A.v.y,
+                               A.p.z + ua * A.v.z),
+                        Point3(B.p.x + ub * B.v.x,
+                               B.p.y + ub * B.v.y,
+                               B.p.z + ub * B.v.z))
+
+def _connect_line3_plane(L, P):
+    d = P.n.dot(L.v)
+    if not d:
+        # Parallel, choose an endpoint
+        return _connect_point3_plane(L.p, P)
+    u = (P.k - P.n.dot(L.p)) / d
+    if not L._u_in(u):
+        # intersects out of range, choose nearest endpoint
+        u = max(min(u, 1.0), 0.0)
+        return _connect_point3_plane(Point3(L.p.x + u * L.v.x,
+                                            L.p.y + u * L.v.y,
+                                            L.p.z + u * L.v.z), P)
+    # Intersection
+    return None
+
+def _connect_sphere_line3(S, L):
+    d = L.v.magnitude_squared()
+    assert d != 0
+    u = ((S.c.x - L.p.x) * L.v.x + \
+         (S.c.y - L.p.y) * L.v.y + \
+         (S.c.z - L.p.z) * L.v.z) / d
+    if not L._u_in(u):
+        u = max(min(u, 1.0), 0.0)
+    point = Point3(L.p.x + u * L.v.x, L.p.y + u * L.v.y, L.p.z + u * L.v.z)
+    v = (point - S.c)
+    v.normalize()
+    v *= S.r
+    return LineSegment3(Point3(S.c.x + v.x, S.c.y + v.y, S.c.z + v.z), 
+                        point)
+
+def _connect_sphere_sphere(A, B):
+    v = B.c - A.c
+    v.normalize()
+    return LineSegment3(Point3(A.c.x + v.x * A.r,
+                               A.c.y + v.y * A.r,
+                               A.c.x + v.z * A.r),
+                        Point3(B.c.x + v.x * B.r,
+                               B.c.y + v.y * B.r,
+                               B.c.x + v.z * B.r))
+
+def _connect_sphere_plane(S, P):
+    c = _connect_point3_plane(S.c, P)
+    if not c:
+        return None
+    p2 = c.p2
+    v = p2 - S.c
+    v.normalize()
+    v *= S.r
+    return LineSegment3(Point3(S.c.x + v.x, S.c.y + v.y, S.c.z + v.z), 
+                        p2)
+
+def _connect_plane_plane(A, B):
+    if A.n.cross(B.n):
+        # Planes intersect
+        return None
+    else:
+        # Planes are parallel, connect to arbitrary point
+        return _connect_point3_plane(A._get_point(), B)
+
+def _intersect_point3_sphere(P, S):
+    return abs(P - S.c) <= S.r
+    
+def _intersect_line3_sphere(L, S):
+    a = L.v.magnitude_squared()
+    b = 2 * (L.v.x * (L.p.x - S.c.x) + \
+             L.v.y * (L.p.y - S.c.y) + \
+             L.v.z * (L.p.z - S.c.z))
+    c = S.c.magnitude_squared() + \
+        L.p.magnitude_squared() - \
+        2 * S.c.dot(L.p) - \
+        S.r ** 2
+    det = b ** 2 - 4 * a * c
+    if det < 0:
+        return None
+    sq = math.sqrt(det)
+    u1 = (-b + sq) / (2 * a)
+    u2 = (-b - sq) / (2 * a)
+    if not L._u_in(u1):
+        u1 = max(min(u1, 1.0), 0.0)
+    if not L._u_in(u2):
+        u2 = max(min(u2, 1.0), 0.0)
+    return LineSegment3(Point3(L.p.x + u1 * L.v.x,
+                               L.p.y + u1 * L.v.y,
+                               L.p.z + u1 * L.v.z),
+                        Point3(L.p.x + u2 * L.v.x,
+                               L.p.y + u2 * L.v.y,
+                               L.p.z + u2 * L.v.z))
+
+def _intersect_line3_plane(L, P):
+    d = P.n.dot(L.v)
+    if not d:
+        # Parallel
+        return None
+    u = (P.k - P.n.dot(L.p)) / d
+    if not L._u_in(u):
+        return None
+    return Point3(L.p.x + u * L.v.x,
+                  L.p.y + u * L.v.y,
+                  L.p.z + u * L.v.z)
+
+def _intersect_plane_plane(A, B):
+    n1_m = A.n.magnitude_squared()
+    n2_m = B.n.magnitude_squared()
+    n1d2 = A.n.dot(B.n)
+    det = n1_m * n2_m - n1d2 ** 2
+    if det == 0:
+        # Parallel
+        return None
+    c1 = (A.k * n2_m - B.k * n1d2) / det
+    c2 = (B.k * n1_m - A.k * n1d2) / det
+    return Line3(Point3(c1 * A.n.x + c2 * B.n.x,
+                        c1 * A.n.y + c2 * B.n.y,
+                        c1 * A.n.z + c2 * B.n.z), 
+                 A.n.cross(B.n))
+
+class Point3(Vector3, Geometry):
+    def __repr__(self):
+        return 'Point3(%.2f, %.2f, %.2f)' % (self.x, self.y, self.z)
+
+    def intersect(self, other):
+        return other._intersect_point3(self)
+
+    def _intersect_sphere(self, other):
+        return _intersect_point3_sphere(self, other)
+
+    def connect(self, other):
+        return other._connect_point3(self)
+
+    def _connect_point3(self, other):
+        if self != other:
+            return LineSegment3(other, self)
+        return None
+
+    def _connect_line3(self, other):
+        c = _connect_point3_line3(self, other)
+        if c:
+            return c._swap()
+        
+    def _connect_sphere(self, other):
+        c = _connect_point3_sphere(self, other)
+        if c:
+            return c._swap()
+
+    def _connect_plane(self, other):
+        c = _connect_point3_plane(self, other)
+        if c:
+            return c._swap()
+
+class Line3:
+    __slots__ = ['p', 'v']
+
+    def __init__(self, *args):
+        if len(args) == 3:
+            assert isinstance(args[0], Point3) and \
+                   isinstance(args[1], Vector3) and \
+                   type(args[2]) == float
+            self.p = args[0].copy()
+            self.v = args[1] * args[2] / abs(args[1])
+        elif len(args) == 2:
+            if isinstance(args[0], Point3) and isinstance(args[1], Point3):
+                self.p = args[0].copy()
+                self.v = args[1] - args[0]
+            elif isinstance(args[0], Point3) and isinstance(args[1], Vector3):
+                self.p = args[0].copy()
+                self.v = args[1].copy()
+            else:
+                raise AttributeError, '%r' % (args,)
+        elif len(args) == 1:
+            if isinstance(args[0], Line3):
+                self.p = args[0].p.copy()
+                self.v = args[0].v.copy()
+            else:
+                raise AttributeError, '%r' % (args,)
+        else:
+            raise AttributeError, '%r' % (args,)
+        
+        # XXX This is annoying.
+        #if not self.v:
+        #    raise AttributeError, 'Line has zero-length vector'
+
+    def __copy__(self):
+        return self.__class__(self.p, self.v)
+
+    copy = __copy__
+
+    def __repr__(self):
+        return 'Line3(<%.2f, %.2f, %.2f> + u<%.2f, %.2f, %.2f>)' % \
+            (self.p.x, self.p.y, self.p.z, self.v.x, self.v.y, self.v.z)
+
+    p1 = property(lambda self: self.p)
+    p2 = property(lambda self: Point3(self.p.x + self.v.x, 
+                                      self.p.y + self.v.y,
+                                      self.p.z + self.v.z))
+
+    def _apply_transform(self, t):
+        self.p = t * self.p
+        self.v = t * self.v
+
+    def _u_in(self, u):
+        return True
+
+    def intersect(self, other):
+        return other._intersect_line3(self)
+
+    def _intersect_sphere(self, other):
+        return _intersect_line3_sphere(self, other)
+
+    def _intersect_plane(self, other):
+        return _intersect_line3_plane(self, other)
+
+    def connect(self, other):
+        return other._connect_line3(self)
+
+    def _connect_point3(self, other):
+        return _connect_point3_line3(other, self)
+
+    def _connect_line3(self, other):
+        return _connect_line3_line3(other, self)
+
+    def _connect_sphere(self, other):
+        return _connect_sphere_line3(other, self)
+
+    def _connect_plane(self, other):
+        c = _connect_line3_plane(self, other)
+        if c:
+            return c
+
+class Ray3(Line3):
+    def __repr__(self):
+        return 'Ray3(<%.2f, %.2f, %.2f> + u<%.2f, %.2f, %.2f>)' % \
+            (self.p.x, self.p.y, self.p.z, self.v.x, self.v.y, self.v.z)
+
+    def _u_in(self, u):
+        return u >= 0.0
+
+class LineSegment3(Line3):
+    def __repr__(self):
+        return 'LineSegment3(<%.2f, %.2f, %.2f> to <%.2f, %.2f, %.2f>)' % \
+            (self.p.x, self.p.y, self.p.z,
+             self.p.x + self.v.x, self.p.y + self.v.y, self.p.z + self.v.z)
+
+    def _u_in(self, u):
+        return u >= 0.0 and u <= 1.0
+
+    def __abs__(self):
+        return abs(self.v)
+
+    def magnitude_squared(self):
+        return self.v.magnitude_squared()
+
+    def _swap(self):
+        # used by connect methods to switch order of points
+        self.p = self.p2
+        self.v *= -1
+        return self
+
+    length = property(lambda self: abs(self.v))
+
+class Sphere:
+    __slots__ = ['c', 'r']
+
+    def __init__(self, center, radius):
+        assert isinstance(center, Vector3) and type(radius) == float
+        self.c = center.copy()
+        self.r = radius
+
+    def __copy__(self):
+        return self.__class__(self.c, self.r)
+
+    copy = __copy__
+
+    def __repr__(self):
+        return 'Sphere(<%.2f, %.2f, %.2f>, radius=%.2f)' % \
+            (self.c.x, self.c.y, self.c.z, self.r)
+
+    def _apply_transform(self, t):
+        self.c = t * self.c
+
+    def intersect(self, other):
+        return other._intersect_sphere(self)
+
+    def _intersect_point3(self, other):
+        return _intersect_point3_sphere(other, self)
+
+    def _intersect_line3(self, other):
+        return _intersect_line3_sphere(other, self)
+
+    def connect(self, other):
+        return other._connect_sphere(self)
+
+    def _connect_point3(self, other):
+        return _connect_point3_sphere(other, self)
+
+    def _connect_line3(self, other):
+        c = _connect_sphere_line3(self, other)
+        if c:
+            return c._swap()
+
+    def _connect_sphere(self, other):
+        return _connect_sphere_sphere(other, self)
+
+    def _connect_plane(self, other):
+        c = _connect_sphere_plane(self, other)
+        if c:
+            return c
+
+class Plane:
+    # n.p = k, where n is normal, p is point on plane, k is constant scalar
+    __slots__ = ['n', 'k']
+
+    def __init__(self, *args):
+        if len(args) == 3:
+            assert isinstance(args[0], Point3) and \
+                   isinstance(args[1], Point3) and \
+                   isinstance(args[2], Point3)
+            self.n = (args[1] - args[0]).cross(args[2] - args[0])
+            self.n.normalize()
+            self.k = self.n.dot(args[0])
+        elif len(args) == 2:
+            if isinstance(args[0], Point3) and isinstance(args[1], Vector3):
+                self.n = args[1].normalized()
+                self.k = self.n.dot(args[0])
+            elif isinstance(args[0], Vector3) and type(args[1]) == float:
+                self.n = args[0].normalized()
+                self.k = args[1]
+            else:
+                raise AttributeError, '%r' % (args,)
+
+        else:
+            raise AttributeError, '%r' % (args,)
+        
+        if not self.n:
+            raise AttributeError, 'Points on plane are colinear'
+
+    def __copy__(self):
+        return self.__class__(self.n, self.k)
+
+    copy = __copy__
+
+    def __repr__(self):
+        return 'Plane(<%.2f, %.2f, %.2f>.p = %.2f)' % \
+            (self.n.x, self.n.y, self.n.z, self.k)
+
+    def _get_point(self):
+        # Return an arbitrary point on the plane
+        if self.n.z:
+            return Point3(0., 0., self.k / self.n.z)
+        elif self.n.y:
+            return Point3(0., self.k / self.n.y, 0.)
+        else:
+            return Point3(self.k / self.n.x, 0., 0.)
+
+    def _apply_transform(self, t):
+        p = t * self._get_point()
+        self.n = t * self.n
+        self.k = self.n.dot(p)
+
+    def intersect(self, other):
+        return other._intersect_plane(self)
+
+    def _intersect_line3(self, other):
+        return _intersect_line3_plane(other, self)
+
+    def _intersect_plane(self, other):
+        return _intersect_plane_plane(self, other)
+
+    def connect(self, other):
+        return other._connect_plane(self)
+
+    def _connect_point3(self, other):
+        return _connect_point3_plane(other, self)
+
+    def _connect_line3(self, other):
+        return _connect_line3_plane(other, self)
+
+    def _connect_sphere(self, other):
+        return _connect_sphere_plane(other, self)
+
+    def _connect_plane(self, other):
+        return _connect_plane_plane(other, self)
+
