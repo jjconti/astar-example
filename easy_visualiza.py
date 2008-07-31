@@ -5,7 +5,7 @@ from itertools_recipes import pairwise
 def flatten(l):
     r = []
     for i in l:
-        if type(i) == type([]):
+        if isinstance(i, list):
             r += i
         else:
             r.append(i)
@@ -21,19 +21,13 @@ class Visualiza(object):
         self.puntos = [Point2(float(x),float(y)) for x,y in flatten(elementos) if (x,y) != inicio]
         self.origen = Point2(float(inicio[0]),float(inicio[1]))
         self.destinos = self.puntos[:]
-        #print self.destinos.remove(self.origen)   #No tiene sentido que un punto se vea a si mismo
 
-        self.poligonos = [self.armar_poligono(e) for e in elementos if isinstance(i, list)]
+        self.poligonos = [self.armar_poligono(e) for e in elementos if isinstance(e, list)]
         self.segmentos = list(flatten(self.poligonos))
 
     def armar_poligono(self, puntos):
-        #print "ARMAR POLIGONO:", puntos
-        #puntos.append(puntos[0]) # cerrar el poligono
         puntos = [Point2(float(x),float(y)) for x,y in puntos]
         r =[]
-        #for p1, p2 in pairwise(puntos):
-        #    r.append(LineSegment2(p1,p2))
-
         #FIXME: segmentos redudantes
         #solo funcionara para figuras convexas
         for p1 in puntos:

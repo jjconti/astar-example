@@ -28,7 +28,6 @@ class Problema(object):
             for nodo in nodos:
                 if nodo not in self.nodos_a_expandir:
                     self.nodos_a_expandir.append(nodo)
-            #self.nodos_a_expandir += nodos
             self.nodos_a_expandir.sort()
             if self.nodos_a_expandir:
                 self.nodo = self.nodos_a_expandir.pop(0)
@@ -48,7 +47,6 @@ class Nodo(object):
         '''
         d es la distancia recorrida desde el inicio.
         '''
-        #print "CREANDO NODO"
         self.elementos = elementos
         self.v = Visualiza(point, deepcopy(self.elementos))
         self.point = point
@@ -72,7 +70,6 @@ class Nodo(object):
             def expandir(self):
         r = []
         for des in self.v.destinos:
-            #print "DESTINO: ", des
             if self.v.es_visible(des):
                 r.append(des)
         return [Nodo(self.elementos, des, self.fin, self.d + self.point.distance(des), father=self) for des in r]
