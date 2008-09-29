@@ -3,9 +3,11 @@ from math import sqrt
 from euclid import LineSegment2, Point2
 from easy_visualiza import Visualiza
 
+ASTAR, AVARA = (0,1)
+
 class Problema(object):
 
-    def __init__(self, elementos):
+    def __init__(self, elementos, tec=ASTAR):
         self.inicio = elementos[0]
         self.fin = elementos[-1]
         self.elementos = elementos
@@ -13,7 +15,7 @@ class Problema(object):
         pinicio = Point2(float(x), float(y))
         xf, yf = self.fin
         pfin = Point2(float(xf), float(yf))
-        self.nodo = Nodo(elementos, pinicio, pfin)
+        self.nodo = Nodo(elementos, pinicio, pfin, tec=tec)
         self.nodos_a_expandir = []
 
     def meta(self):
@@ -43,10 +45,11 @@ class Problema(object):
         
 class Nodo(object):
 
-    def __init__(self, elementos, point, fin, d=0, father=None):
+    def __init__(self, elementos, point, fin, d=0, father=None, tec=ASTAR):
         '''
         d es la distancia recorrida desde el inicio.
         '''
+        self.tec = tec
         self.elementos = elementos
         self.v = Visualiza(point, deepcopy(self.elementos))
         self.point = point
@@ -62,8 +65,17 @@ class Nodo(object):
     def pos(self):
         return (self.point.x, self.point.y)
 
-    def __cmp__(self, o):
+    def __cmp_astar__(self, o):
         return cmp(self.d + self.h, o.d + o.h)
+
+    def __cmp_avara__(self, o):
+        return cmp(self.h, o.h)
+
+    def __cmp__(self, o):
+        if self.tec == ASTAR:
+            return self.__cmp_astar__(o)
+        elif self.tec == AVARA:
+            return self.__cmp_avara__(o)
 
     def __repr__(self):
         return str(self.point)
@@ -72,7 +84,7 @@ class Nodo(object):
         for des in self.v.destinos:
             if self.v.es_visible(des):
                 r.append(des)
-        return [Nodo(self.elementos, des, self.fin, self.d + self.point.distance(des), father=self) for des in r]
+        return [Nodo(self.elementos, des, self.fin, self.d + self.point.distance(des), self, self.tec) for des in r]
 
 if __name__ == '__main__':
     elementos = [(0,0), (0,4), [(3,0), (3,2), (3,4), (5,0), (5,4)], (7,2)]

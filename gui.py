@@ -1,6 +1,6 @@
 import sys
 from itertools_recipes import pairwise
-from astar import Problema
+from astar import Problema, ASTAR, AVARA
 
 import pygame
 from pygame.locals import *
@@ -10,9 +10,12 @@ BLACK = (10,20,30)
 BLUE = (0,0,255)
 GREEN = (0,255,0)
 RED = (255,0,0)
+DRED = (215,0,0)
 BROWN = (222,170,100)
+
 WINDOW_TITLE = "A*"
 WINDOW = (800,600)
+
 if not pygame.font: print 'Warning, fonts disabled'
 if not pygame.mixer: print 'Warning, sound disabled'
 
@@ -35,7 +38,7 @@ class GUI(object):
     def loop(self):
        pygame.display.flip()
        while not self.exit:
-
+            
             self.clock.tick(100)
             
             for event in pygame.event.get():
@@ -86,12 +89,14 @@ class GUI(object):
                 else:
                     self.points.append(self.buffer[:])
                     pygame.draw.polygon(self.screen, BROWN, self.buffer)
-                    #pygame.draw.lines(self.screen, BLACK, True, self.buffer, 1)
                     self.buffer = []
             if event.key == K_RETURN:
                 self.points = [self.inicio] + self.points + [self.fin]
-                pr = Problema(self.points)
-                for i,j in pairwise(pr.resolver()):
+                pr_avara = Problema(self.points, AVARA)
+                pr_astar = Problema(self.points, ASTAR)
+                for i,j in pairwise(pr_avara.resolver()):
+                    pygame.draw.line(self.screen, DRED, i.pos(), j.pos(), 4)
+                for i,j in pairwise(pr_astar.resolver()):
                     pygame.draw.line(self.screen, BLUE, i.pos(), j.pos(), 2)
                 self.only_esc = True
         
