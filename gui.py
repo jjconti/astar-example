@@ -6,10 +6,11 @@ import pygame
 from pygame.locals import *
 
 WHITE = (255,255,255)
-BLACK = (0,0,0)
+BLACK = (10,20,30)
 BLUE = (0,0,255)
 GREEN = (0,255,0)
 RED = (255,0,0)
+BROWN = (222,170,100)
 WINDOW_TITLE = "A*"
 WINDOW = (800,600)
 if not pygame.font: print 'Warning, fonts disabled'
@@ -84,7 +85,8 @@ class GUI(object):
                     self.points.append(self.buffer.pop())
                 else:
                     self.points.append(self.buffer[:])
-                    pygame.draw.lines(self.screen, BLACK, True, self.buffer, 1)
+                    pygame.draw.polygon(self.screen, BROWN, self.buffer)
+                    #pygame.draw.lines(self.screen, BLACK, True, self.buffer, 1)
                     self.buffer = []
             if event.key == K_RETURN:
                 self.points = [self.inicio] + self.points + [self.fin]
