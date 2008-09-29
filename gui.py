@@ -98,7 +98,8 @@ class GUI(object):
     def reset(self):
         self.screen.blit(self.bg, (0,0))
         self.inicio = self.fin = None
-        self.buffer = self.points = []
+        self.buffer = []
+        self.points = []
         self.only_esc = False
 
     def draw(self):
