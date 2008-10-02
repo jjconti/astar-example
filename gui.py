@@ -85,8 +85,8 @@ class GUI(object):
                     self.points.append(self.buffer.pop())
                 else:
                     self.points.append(self.buffer[:])
-                    pygame.draw.polygon(self.screen, BROWN, self.buffer)
-                    #pygame.draw.lines(self.screen, BLACK, True, self.buffer, 1)
+                    for tri in [(p1, p2, p3) for p1 in self.buffer for p2 in self.buffer for p3 in self.buffer]:
+                        pygame.draw.polygon(self.screen, BROWN, tri)
                     self.buffer = []
             if event.key == K_RETURN:
                 self.points = [self.inicio] + self.points + [self.fin]
